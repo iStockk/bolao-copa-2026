@@ -7,10 +7,13 @@ costumam estar embutidos num hyperlink mailto:/tel: que sobrevive a limpar só o
 e faz uma varredura de segurança em todas as abas removendo qualquer hyperlink
 mailto:/tel: e qualquer valor de texto que contenha '@' (e-mail).
 """
+import re
 import sys
 import openpyxl
 
 ARQUIVO = "TABELA_APOSTAS_-_COPA_2026.xlsx"
+# sequência longa de dígitos com separadores comuns de telefone
+_RE_TEL = re.compile(r"\d[\d\s().+-]{7,}\d")
 ABAS_PARTICIPANTES = [
     "Beda", "Pedro", "Mauro", "Rodrigo", "Paulo", "Su", "Biral",
     "Mané", "Caio", "Camps ", "Romanelli", "AH", "Kim",
@@ -56,7 +59,13 @@ def main(arquivo=ARQUIVO):
                         cel.hyperlink = None
                         limpas += 1
                 v = cel.value
-                if isinstance(v, str) and "@" in v and "." in v.split("@")[-1]:
+                eh_email = isinstance(v, str) and "@" in v and "." in v.split("@")[-1]
+                eh_tel_txt = (isinstance(v, str) and _RE_TEL.search(v)
+                              and sum(c.isdigit() for c in v) >= 9)
+                eh_tel_num = (isinstance(v, int) and not isinstance(v, bool)
+                              and v >= 10 ** 8)
+                if eh_email or eh_tel_txt or eh_tel_num:
+                    print(f"  - removido {ws.title}!{cel.coordinate}", file=sys.stderr)
                     cel.value = None
                     limpas += 1
 

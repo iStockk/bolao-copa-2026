@@ -28,14 +28,17 @@ def pontos_jogo(pc, pf, rc, rf):
     return p
 
 
-def total_participante(palpites, resultados, bonus=0):
+def total_participante(palpites, resultados, bonus=0, ignorar=()):
     """Soma os pontos de um participante sobre todos os jogos com resultado.
 
     palpites: dict {num_jogo: (gols1, gols2)}
     resultados: dict {num_jogo: (gols1, gols2) | (None, None)}
+    ignorar: conjunto de números de jogos que NÃO contam (ex.: os 4 primeiros).
     """
     total = bonus
     for num, res in resultados.items():
+        if num in ignorar:
+            continue
         rc, rf = res
         if rc is None or rf is None:
             continue
@@ -44,10 +47,10 @@ def total_participante(palpites, resultados, bonus=0):
     return total
 
 
-def montar_ranking(palpites_por_part, resultados, bonus_map):
+def montar_ranking(palpites_por_part, resultados, bonus_map, ignorar=()):
     """Lista (nome, pontos) ordenada por pontos desc, desempate alfabético."""
     linhas = [
-        (nome, total_participante(palpites, resultados, bonus_map.get(nome, 0)))
+        (nome, total_participante(palpites, resultados, bonus_map.get(nome, 0), ignorar))
         for nome, palpites in palpites_por_part.items()
     ]
     linhas.sort(key=lambda x: (-x[1], x[0]))

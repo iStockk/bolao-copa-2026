@@ -5,9 +5,14 @@ Retorna apenas jogos finalizados, com os times já convertidos para PT.
 """
 import json
 import sys
+import time
 import urllib.request
 
 from bolao.nomes import casar_time
+
+# NOTA (Fase 2 / mata-mata): jogos decididos nos pênaltis chegam com o placar do
+# tempo normal (empate). A regra de pontuação do mata-mata ainda está pendente
+# (ver spec §9); hoje só a fase de grupos é suportada.
 
 ESPN_URL = (
     "https://site.api.espn.com/apis/site/v2/sports/soccer/"
@@ -15,11 +20,19 @@ ESPN_URL = (
 )
 
 
-def _baixar(data_yyyymmdd):
+def _baixar(data_yyyymmdd, tentativas=3):
     url = ESPN_URL.format(data_yyyymmdd)
     req = urllib.request.Request(url, headers={"User-Agent": "bolao-copa-2026"})
-    with urllib.request.urlopen(req, timeout=30) as r:
-        return json.loads(r.read().decode("utf-8"))
+    erro = None
+    for i in range(tentativas):
+        try:
+            with urllib.request.urlopen(req, timeout=30) as r:
+                return json.loads(r.read().decode("utf-8"))
+        except Exception as e:  # noqa: BLE001 — tenta de novo com backoff
+            erro = e
+            if i < tentativas - 1:
+                time.sleep(2 ** i)
+    raise erro
 
 
 def _gols(c):
@@ -71,7 +84,12 @@ def buscar_partidas_finalizadas(datas, baixar=_baixar):
     out = []
     nao_mapeados = set()
     for d in datas:
-        for p in parse_eventos(baixar(d)):
+        try:
+            payload = baixar(d)
+        except Exception as e:  # noqa: BLE001 — uma data com falha não perde as outras
+            print(f"AVISO: falha ao buscar data {d}: {e}", file=sys.stderr)
+            continue
+        for p in parse_eventos(payload):
             if not p["completo"]:
                 continue
             if p["time1_pt"] is None:

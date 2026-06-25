@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import openpyxl
 
-from bolao.modelo import PARTICIPANTES, BONUS, PREMIO
+from bolao.modelo import PARTICIPANTES, BONUS, PREMIO, JOGOS_IGNORADOS
 from bolao.planilha import (
     ler_jogos, ler_palpites, ler_resultados, escrever_resultado,
     reordenar_classificacao,
@@ -28,10 +28,30 @@ ESTADO = "estado.json"
 TZ_BR = timezone(timedelta(hours=-3))
 
 
-def _janela_datas(hoje_utc):
-    """Datas YYYYMMDD a consultar: anteontem, ontem e hoje (UTC) — cobre o fuso
-    (jogos de 22h BRT caem no dia seguinte em UTC) e eventuais reprocessamentos."""
-    return [(hoje_utc - timedelta(days=k)).strftime("%Y%m%d") for k in (2, 1, 0)]
+def _datas_a_buscar(wb):
+    """Datas YYYYMMDD a consultar. Inclui:
+    - a janela recente (anteontem..hoje em UTC);
+    - a data de TODO jogo ainda sem placar, e o dia seguinte (auto-recuperação +
+      cobertura do fuso: jogos de 22h BRT caem no dia seguinte em UTC).
+    Buscar datas extras é inofensivo: nunca sobrescreve placar e ignora não-finalizados."""
+    jogos = ler_jogos(wb)
+    resultados = ler_resultados(wb)
+    datas = set()
+    for num, j in jogos.items():
+        if num in JOGOS_IGNORADOS:
+            continue
+        rc, rf = resultados[num]
+        if rc is None or rf is None:
+            try:
+                d = datetime.strptime(j.data, "%Y-%m-%d").date()
+                datas.add(d.strftime("%Y%m%d"))
+                datas.add((d + timedelta(days=1)).strftime("%Y%m%d"))
+            except (ValueError, TypeError):
+                pass
+    hoje = datetime.now(timezone.utc).date()
+    for k in (2, 1, 0):
+        datas.add((hoje - timedelta(days=k)).strftime("%Y%m%d"))
+    return sorted(datas)
 
 
 def _br_data(iso):
@@ -41,20 +61,32 @@ def _br_data(iso):
 
 def _aplicar_resultados(wb, partidas):
     """Casa cada partida (por par de times) com o jogo da planilha e grava
-    o placar na ordem time1/time2 da planilha. Retorna nº de jogos novos."""
+    o placar na ordem time1/time2 da planilha. Retorna nº de jogos novos.
+    Uma partida problemática é logada e pulada — nunca aborta as demais."""
     jogos = ler_jogos(wb)
     indice = {frozenset((j.time1, j.time2)): num for num, j in jogos.items()}
     novos = 0
     for t1, t2, g1, g2 in partidas:
-        num = indice.get(frozenset((t1, t2)))
-        if num is None:
-            print(f"AVISO: jogo {t1} x {t2} não encontrado na planilha", file=sys.stderr)
-            continue
-        j = jogos[num]
-        casa, fora = (g1, g2) if j.time1 == t1 else (g2, g1)
-        if escrever_resultado(wb, num, casa, fora):
-            novos += 1
-            print(f"  + jogo {num}: {j.time1} {casa} x {fora} {j.time2}")
+        try:
+            num = indice.get(frozenset((t1, t2)))
+            if num is None:
+                print(f"AVISO: jogo {t1} x {t2} não encontrado na planilha", file=sys.stderr)
+                continue
+            if num in JOGOS_IGNORADOS:
+                continue  # jogo fora do bolão (decisão do time) — nunca preencher
+            j = jogos[num]
+            # Invariante do casamento por par: {t1,t2} == {time1,time2}. Validamos
+            # explicitamente para JAMAIS gravar um placar invertido em silêncio.
+            if {t1, t2} != {j.time1, j.time2}:
+                print(f"AVISO: par {t1} x {t2} não confere com o jogo {num} "
+                      f"({j.time1} x {j.time2}); pulando", file=sys.stderr)
+                continue
+            casa, fora = (g1, g2) if j.time1 == t1 else (g2, g1)
+            if escrever_resultado(wb, num, casa, fora):
+                novos += 1
+                print(f"  + jogo {num}: {j.time1} {casa} x {fora} {j.time2}")
+        except Exception as e:  # noqa: BLE001 — uma partida ruim não derruba as outras
+            print(f"AVISO: erro ao aplicar {t1} x {t2}: {e}", file=sys.stderr)
     return novos
 
 
@@ -62,6 +94,8 @@ def _dados_rodada(jogos, resultados, palpites):
     """Resultados do dia mais recente com placar + pontos de cada um nesse dia."""
     por_data = {}
     for num, j in jogos.items():
+        if num in JOGOS_IGNORADOS:
+            continue
         rc, rf = resultados[num]
         if rc is not None and rf is not None:
             por_data.setdefault(j.data, []).append(num)
@@ -94,20 +128,21 @@ def main(buscar=buscar_partidas_finalizadas):
     agora = datetime.now(TZ_BR)
     wb = openpyxl.load_workbook(ARQUIVO)
 
-    # 1) buscar e gravar placares (falha de rede não derruba a geração)
+    # 1) buscar placares (só a rede fica no try) e gravar (com tratamento por partida)
+    partidas = []
     try:
-        partidas = buscar(_janela_datas(datetime.now(timezone.utc)))
-        novos = _aplicar_resultados(wb, partidas)
-        print(f"{novos} jogo(s) novo(s) gravado(s).")
+        partidas = buscar(_datas_a_buscar(wb))
     except Exception as e:  # noqa: BLE001 — robustez: regenera com o que já há
         print(f"AVISO: falha ao buscar placares ({e}). Gerando com dados atuais.",
               file=sys.stderr)
+    novos = _aplicar_resultados(wb, partidas)
+    print(f"{novos} jogo(s) novo(s) gravado(s).")
 
     # 2) calcular ranking
     jogos = ler_jogos(wb)
     resultados = ler_resultados(wb)
     palpites = {disp: ler_palpites(wb, aba) for disp, aba in PARTICIPANTES}
-    ranking = montar_ranking(palpites, resultados, BONUS)
+    ranking = montar_ranking(palpites, resultados, BONUS, ignorar=JOGOS_IGNORADOS)
 
     # 3) variação vs estado anterior
     ordem_ant = _carregar_estado().get("ordem", [])

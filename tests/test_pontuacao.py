@@ -38,6 +38,13 @@ def test_total_participante_soma_e_bonus():
     assert total_participante(palpites, resultados, bonus=10) == 5 + 2 + 10
 
 
+def test_total_ignora_jogos_excluidos():
+    palpites = {1: (2, 0), 5: (1, 0)}
+    resultados = {1: (2, 0), 5: (1, 0)}  # acerto cheio nos dois (5 cada)
+    assert total_participante(palpites, resultados) == 10
+    assert total_participante(palpites, resultados, ignorar={1}) == 5
+
+
 def test_montar_ranking_ordena_desc_com_desempate():
     palpites = {"Ana": {1: (1, 0)}, "Bia": {1: (0, 0)}, "Cau": {1: (1, 0)}}
     # real 1x0: Ana e Cau acertam cheio (5); Bia (0x0) acerta só os gols do time2 (0==0) = 1

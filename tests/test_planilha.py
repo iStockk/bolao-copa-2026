@@ -7,7 +7,7 @@ from bolao.planilha import (
     reordenar_classificacao,
 )
 from bolao.pontuacao import montar_ranking
-from bolao.modelo import PARTICIPANTES, BONUS
+from bolao.modelo import PARTICIPANTES, BONUS, JOGOS_IGNORADOS
 
 ARQUIVO = "TABELA_APOSTAS_-_COPA_2026.xlsx"
 
@@ -27,8 +27,19 @@ def test_reproduz_totais_oficiais():
     wb = _carregar()
     resultados = ler_resultados(wb)
     palpites = {disp: ler_palpites(wb, aba) for disp, aba in PARTICIPANTES}
-    ranking = dict(montar_ranking(palpites, resultados, BONUS))
+    ranking = dict(montar_ranking(palpites, resultados, BONUS, ignorar=JOGOS_IGNORADOS))
     assert ranking == ESPERADO
+
+
+def test_jogos_ignorados_nao_afetam_ranking():
+    # Mesmo se os jogos 1-4 tiverem placar, eles NÃO podem contar (decisão do time).
+    wb = openpyxl.load_workbook(ARQUIVO)
+    for num in (1, 2, 3, 4):
+        escrever_resultado(wb, num, 5, 0)  # placar arbitrário
+    resultados = ler_resultados(wb)
+    palpites = {disp: ler_palpites(wb, aba) for disp, aba in PARTICIPANTES}
+    ranking = dict(montar_ranking(palpites, resultados, BONUS, ignorar=JOGOS_IGNORADOS))
+    assert ranking == ESPERADO  # inalterado
 
 
 def test_ler_jogos_tem_72_e_brasil_escocia():

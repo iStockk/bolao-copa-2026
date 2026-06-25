@@ -14,7 +14,11 @@ Um robô (GitHub Actions) roda todo dia de manhã e, sozinho:
 4. Reordena a tabela de classificação na planilha.
 5. Gera a página (`site/index.html`) e publica no GitHub Pages.
 
-A planilha é a fonte da verdade: os palpites de cada um (travados) e os resultados.
+A planilha é a fonte da verdade dos **palpites** (travados) e dos **resultados**.
+A classificação exibida na página é calculada em **Python** a partir desses dados.
+Obs.: a aba "Total Pontos" guarda fórmulas (`=SUM(...)`); os valores exibidos nela só
+recalculam ao abrir o arquivo no Excel/LibreOffice (o openpyxl não recalcula). Isso não
+afeta a página publicada, que sempre reflete o cálculo em Python.
 
 ## Pontuação (por jogo, máx. 5 pts)
 
