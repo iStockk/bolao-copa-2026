@@ -5,3 +5,5 @@ scratchpad/
 ~$*.xlsx
 _BACKUP_*.xlsx
 .DS_Store
+.playwright-mcp/
+bolao-preview.png

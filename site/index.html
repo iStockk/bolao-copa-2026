@@ -1,16 +1,17 @@
-"""Renderização da página (HTML autossuficiente, tema 'placar de estádio').
-
-`render_pagina(...)` recebe os dados já calculados e devolve o HTML completo
-(documento pronto para servir no GitHub Pages).
-"""
-import html as _html
-
-from bolao.modelo import PREMIO
-
-_MEDALHAS = {1: "🥇", 2: "🥈", 3: "🥉"}
-_POS_CLASSE = {1: "ouro", 2: "prata", 3: "bronze"}
-
-_CSS = """
+<!doctype html>
+<html lang="pt-br">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bolão Copa 2026</title>
+<meta name="description" content="Classificação ao vivo do Bolão da Copa 2026.">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
+<meta property="og:title" content="Bolão Copa 2026 — Classificação">
+<meta property="og:description" content="Ranking atualizado todo dia automaticamente.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
 :root{
   --bg:#06120c; --bg2:#0a1c12; --surf:#0f241a; --surf2:#122c20;
   --linha:#1d4030; --grama:#1fe07a; --grama-esc:#0fb863;
@@ -91,120 +92,27 @@ h1{font-family:'Anton',Impact,'Arial Narrow',sans-serif;font-weight:400;
 .regras{margin-top:10px;display:inline-flex;flex-wrap:wrap;gap:6px;justify-content:center}
 .tag{background:var(--surf);border:1px solid var(--linha);border-radius:8px;padding:5px 10px;font-size:11px;font-weight:600;color:var(--txt2)}
 @media(max-width:380px){.row{grid-template-columns:38px 1fr auto auto;gap:8px;padding:11px}.nome{font-size:15px}}
-"""
-
-
-def _esc(s):
-    return _html.escape(str(s))
-
-
-def _linha_rank(i, nome, pts, var):
-    pos = i + 1
-    classe = _POS_CLASSE.get(pos, "")
-    medalha = f'<span class="medalha">{_MEDALHAS[pos]}</span>' if pos in _MEDALHAS else ""
-    lider = '<span class="lider">Líder</span>' if pos == 1 else ""
-    if var is None:
-        var_html = '<span class="var z">·</span>'
-    elif var > 0:
-        var_html = f'<span class="var s">▲{var}</span>'
-    elif var < 0:
-        var_html = f'<span class="var d">▼{abs(var)}</span>'
-    else:
-        var_html = '<span class="var z">–</span>'
-    return (
-        f'<div class="row {classe}" style="animation-delay:{i*45}ms">'
-        f'<div class="pos">{pos}</div>'
-        f'<div class="nome">{medalha}{_esc(nome)}{lider}</div>'
-        f'{var_html}'
-        f'<div class="pts">{pts}<small>PTS</small></div>'
-        f'</div>'
-    )
-
-
-def _card_jogo(t1, g1, g2, t2):
-    return (
-        f'<div class="jogo"><span class="t1">{_esc(t1)}</span>'
-        f'<span class="placar">{g1} : {g2}</span>'
-        f'<span class="t2">{_esc(t2)}</span></div>'
-    )
-
-
-def _card_premio(pos, valor, nome):
-    return (
-        f'<div class="premio {_POS_CLASSE[pos]}"><div class="m">{_MEDALHAS[pos]}</div>'
-        f'<div class="v">R$ {valor}</div>'
-        f'<div class="q">{_esc(nome) if nome else "—"}</div>'
-        f'<div class="l">{pos}º lugar</div></div>'
-    )
-
-
-def render_pagina(ranking, *, variacao=None, resultados_rodada=None,
-                  pontos_rodada=None, premio=None, atualizado_em="",
-                  data_rodada=""):
-    variacao = variacao or {}
-    premio = premio or PREMIO
-
-    linhas = "".join(
-        _linha_rank(i, nome, pts, variacao.get(nome))
-        for i, (nome, pts) in enumerate(ranking)
-    )
-
-    # seção de resultados (opcional)
-    sec_result = ""
-    if resultados_rodada:
-        jogos = "".join(_card_jogo(*j) for j in resultados_rodada)
-        destaque = ""
-        if pontos_rodada:
-            top = max(pontos_rodada.items(), key=lambda kv: kv[1])
-            if top[1] > 0:
-                nomes = [n for n, p in pontos_rodada.items() if p == top[1]]
-                quem = ", ".join(_esc(n) for n in nomes)
-                destaque = (f'<div class="destaque">🔥 Destaque da rodada: '
-                            f'<b>{quem}</b> — +{top[1]} pts</div>')
-        titulo = "Resultados" + (f" · {_esc(data_rodada)}" if data_rodada else "")
-        sec_result = (
-            f'<div class="secao"><div class="secao-tit">⚽ {titulo}</div>'
-            f'<div class="jogos">{jogos}</div>{destaque}</div>'
-        )
-
-    # prêmio: nomes atualmente em 1º/2º/3º
-    nome_pos = {i + 1: nome for i, (nome, _) in enumerate(ranking)}
-    premios = "".join(_card_premio(p, premio[p], nome_pos.get(p)) for p in (1, 2, 3))
-
-    return f"""<!doctype html>
-<html lang="pt-br">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Bolão Copa 2026</title>
-<meta name="description" content="Classificação ao vivo do Bolão da Copa 2026.">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9A%BD%3C/text%3E%3C/svg%3E">
-<meta property="og:title" content="Bolão Copa 2026 — Classificação">
-<meta property="og:description" content="Ranking atualizado todo dia automaticamente.">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-<style>{_CSS}</style>
+</style>
 </head>
 <body>
 <div class="wrap">
   <header>
     <div class="kicker">⚽ Copa 2026 · Fase de Grupos</div>
     <h1>Bolão<br>Copa 2026</h1>
-    <div class="sub">Classificação geral · {len(ranking)} apostadores</div>
-    <div class="atualizado"><span class="dot"></span> Atualizado em {_esc(atualizado_em)}</div>
+    <div class="sub">Classificação geral · 13 apostadores</div>
+    <div class="atualizado"><span class="dot"></span> Atualizado em 25/06/2026 às 17:24</div>
   </header>
 
   <div class="secao">
     <div class="secao-tit">🏆 Classificação</div>
-    <div class="tabela">{linhas}</div>
+    <div class="tabela"><div class="row ouro" style="animation-delay:0ms"><div class="pos">1</div><div class="nome"><span class="medalha">🥇</span>Mané<span class="lider">Líder</span></div><span class="var z">–</span><div class="pts">110<small>PTS</small></div></div><div class="row prata" style="animation-delay:45ms"><div class="pos">2</div><div class="nome"><span class="medalha">🥈</span>AH</div><span class="var z">–</span><div class="pts">107<small>PTS</small></div></div><div class="row bronze" style="animation-delay:90ms"><div class="pos">3</div><div class="nome"><span class="medalha">🥉</span>Romanelli</div><span class="var z">–</span><div class="pts">106<small>PTS</small></div></div><div class="row " style="animation-delay:135ms"><div class="pos">4</div><div class="nome">Su</div><span class="var z">–</span><div class="pts">100<small>PTS</small></div></div><div class="row " style="animation-delay:180ms"><div class="pos">5</div><div class="nome">Rodrigo</div><span class="var z">–</span><div class="pts">99<small>PTS</small></div></div><div class="row " style="animation-delay:225ms"><div class="pos">6</div><div class="nome">Beda</div><span class="var z">–</span><div class="pts">95<small>PTS</small></div></div><div class="row " style="animation-delay:270ms"><div class="pos">7</div><div class="nome">Mauro</div><span class="var z">–</span><div class="pts">95<small>PTS</small></div></div><div class="row " style="animation-delay:315ms"><div class="pos">8</div><div class="nome">Pedro</div><span class="var z">–</span><div class="pts">90<small>PTS</small></div></div><div class="row " style="animation-delay:360ms"><div class="pos">9</div><div class="nome">Caio</div><span class="var z">–</span><div class="pts">89<small>PTS</small></div></div><div class="row " style="animation-delay:405ms"><div class="pos">10</div><div class="nome">Biral</div><span class="var z">–</span><div class="pts">87<small>PTS</small></div></div><div class="row " style="animation-delay:450ms"><div class="pos">11</div><div class="nome">Paulo</div><span class="var z">–</span><div class="pts">85<small>PTS</small></div></div><div class="row " style="animation-delay:495ms"><div class="pos">12</div><div class="nome">Camps</div><span class="var z">–</span><div class="pts">74<small>PTS</small></div></div><div class="row " style="animation-delay:540ms"><div class="pos">13</div><div class="nome">Kim</div><span class="var z">–</span><div class="pts">58<small>PTS</small></div></div></div>
   </div>
 
-  {sec_result}
+  <div class="secao"><div class="secao-tit">⚽ Resultados · 24/06</div><div class="jogos"><div class="jogo"><span class="t1">Suíça</span><span class="placar">2 : 1</span><span class="t2">Canadá</span></div><div class="jogo"><span class="t1">Bósnia</span><span class="placar">3 : 1</span><span class="t2">Catar</span></div><div class="jogo"><span class="t1">Escócia</span><span class="placar">0 : 3</span><span class="t2">Brasil</span></div><div class="jogo"><span class="t1">Marrocos</span><span class="placar">4 : 2</span><span class="t2">Haiti</span></div><div class="jogo"><span class="t1">Tchéquia</span><span class="placar">0 : 3</span><span class="t2">México</span></div><div class="jogo"><span class="t1">África do Sul</span><span class="placar">1 : 0</span><span class="t2">Coreia do Sul</span></div></div><div class="destaque">🔥 Destaque da rodada: <b>AH</b> — +15 pts</div></div>
 
   <div class="secao">
     <div class="secao-tit">💰 Prêmio · R$ 650</div>
-    <div class="premios">{premios}</div>
+    <div class="premios"><div class="premio ouro"><div class="m">🥇</div><div class="v">R$ 325</div><div class="q">Mané</div><div class="l">1º lugar</div></div><div class="premio prata"><div class="m">🥈</div><div class="v">R$ 195</div><div class="q">AH</div><div class="l">2º lugar</div></div><div class="premio bronze"><div class="m">🥉</div><div class="v">R$ 130</div><div class="q">Romanelli</div><div class="l">3º lugar</div></div></div>
   </div>
 
   <div class="rodape">
@@ -217,4 +125,4 @@ def render_pagina(ranking, *, variacao=None, resultados_rodada=None,
   </div>
 </div>
 </body>
-</html>"""
+</html>
