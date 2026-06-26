@@ -5,7 +5,7 @@ import openpyxl
 
 from bolao.planilha import (
     ler_jogos, ler_palpites, ler_resultados, escrever_resultado,
-    reordenar_classificacao,
+    escrever_palpites, reordenar_classificacao,
 )
 from bolao.pontuacao import montar_ranking
 from bolao.modelo import PARTICIPANTES, BONUS, JOGOS_IGNORADOS
@@ -84,3 +84,23 @@ def test_reordenar_classificacao_escreve_ordem_e_formulas():
     assert ws.cell(14, 5).value == "=SUM('Kim'!K5:K76)+10"
     # Mané não tem bônus
     assert ws.cell(12, 5).value == "=SUM('Mané'!K5:K76)"
+
+
+def test_escrever_palpites_grava_gols_nas_colunas_D_e_F():
+    # Merge do form -> aba do participante. Jogo do mata-mata (ex.: nº 73).
+    wb = openpyxl.Workbook()
+    wb.active.title = "Caio"
+    escrever_palpites(wb, "Caio", {73: (0, 2), 74: (1, 1)})
+    ws = wb["Caio"]
+    assert (ws.cell(77, 4).value, ws.cell(77, 6).value) == (0, 2)  # jogo 73 -> linha 77 (D/F)
+    assert (ws.cell(78, 4).value, ws.cell(78, 6).value) == (1, 1)  # jogo 74 -> linha 78
+
+
+def test_escrever_palpites_sobrescreve_palpite_anterior():
+    # Caio re-mergeia porque o participante mudou a aposta antes do prazo.
+    wb = openpyxl.Workbook()
+    wb.active.title = "Su"
+    escrever_palpites(wb, "Su", {73: (3, 0)})
+    escrever_palpites(wb, "Su", {73: (1, 2)})
+    ws = wb["Su"]
+    assert (ws.cell(77, 4).value, ws.cell(77, 6).value) == (1, 2)

@@ -94,6 +94,19 @@ def escrever_resultado(wb, num, casa, fora):
     return False
 
 
+def escrever_palpites(wb, aba, palpites):
+    """Grava os palpites de um participante na aba dele (cols D=gols1, F=gols2).
+
+    palpites: dict {num_jogo: (gols1, gols2)}. Usado no merge das respostas do
+    Google Forms (mata-mata). Sobrescreve o que estiver lá (re-merge é seguro).
+    """
+    ws = wb[aba]
+    for num, (g1, g2) in palpites.items():
+        r = _linha(num)
+        ws.cell(r, COL["gols1"]).value = g1
+        ws.cell(r, COL["gols2"]).value = g2
+
+
 def reordenar_classificacao(wb, ranking):
     """Reescreve a tabela de classificação (D12:E24) na ordem do ranking,
     preservando as fórmulas =SUM('aba'!K5:K76)[+bonus] (Excel recalcula ao abrir)."""

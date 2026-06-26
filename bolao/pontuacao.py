@@ -17,24 +17,37 @@ def _sign(n):
     return (n > 0) - (n < 0)
 
 
-def pontos_jogo(pc, pf, rc, rf):
-    """Pontos de um palpite (pc, pf) contra o resultado real (rc, rf)."""
+def pontos_jogo(pc, pf, rc, rf, avanca=None):
+    """Pontos de um palpite (pc, pf) contra o resultado real (rc, rf).
+
+    avanca: usado no mata-mata quando o jogo foi decidido nos PÊNALTIS (placar
+    empatado nos 120min). Indica quem se classificou — 1=time1 (casa), 2=time2
+    (visitante). Nesse caso o +2 do resultado vai para quem APONTOU o time que
+    passou; apostar empate NÃO leva o +2 (mas ainda leva os +1 dos gols/total).
+    Em jogo normal (avanca=None), o +2 é pelo acerto do sinal V/E/D, como sempre.
+    """
     if not all(_num(v) for v in (pc, pf, rc, rf)):
         return 0
-    p = 2 if _sign(pc - pf) == _sign(rc - rf) else 0
+    if avanca is None:
+        p = 2 if _sign(pc - pf) == _sign(rc - rf) else 0
+    else:
+        palpite_vencedor = 1 if pc > pf else (2 if pf > pc else 0)  # 0 = apostou empate
+        p = 2 if palpite_vencedor == avanca else 0
     p += 1 if pc == rc else 0
     p += 1 if pf == rf else 0
     p += 1 if pc + pf == rc + rf else 0
     return p
 
 
-def total_participante(palpites, resultados, bonus=0, ignorar=()):
+def total_participante(palpites, resultados, bonus=0, ignorar=(), avancos=None):
     """Soma os pontos de um participante sobre todos os jogos com resultado.
 
     palpites: dict {num_jogo: (gols1, gols2)}
     resultados: dict {num_jogo: (gols1, gols2) | (None, None)}
     ignorar: conjunto de números de jogos que NÃO contam (ex.: os 4 primeiros).
+    avancos: dict {num_jogo: 1|2} — quem passou nos jogos decididos por pênaltis.
     """
+    avancos = avancos or {}
     total = bonus
     for num, res in resultados.items():
         if num in ignorar:
@@ -43,14 +56,14 @@ def total_participante(palpites, resultados, bonus=0, ignorar=()):
         if rc is None or rf is None:
             continue
         pc, pf = palpites.get(num, (None, None))
-        total += pontos_jogo(pc, pf, rc, rf)
+        total += pontos_jogo(pc, pf, rc, rf, avanca=avancos.get(num))
     return total
 
 
-def montar_ranking(palpites_por_part, resultados, bonus_map, ignorar=()):
+def montar_ranking(palpites_por_part, resultados, bonus_map, ignorar=(), avancos=None):
     """Lista (nome, pontos) ordenada por pontos desc, desempate alfabético."""
     linhas = [
-        (nome, total_participante(palpites, resultados, bonus_map.get(nome, 0), ignorar))
+        (nome, total_participante(palpites, resultados, bonus_map.get(nome, 0), ignorar, avancos))
         for nome, palpites in palpites_por_part.items()
     ]
     linhas.sort(key=lambda x: (-x[1], x[0]))
