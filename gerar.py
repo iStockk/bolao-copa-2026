@@ -124,6 +124,30 @@ def _carregar_estado():
     return {}
 
 
+def calcular_variacao(ranking, estado_ant):
+    """Setas de posição vs a última ordem ESTÁVEL (não vs o run anterior).
+
+    O robô roda várias vezes por dia; se comparássemos com o run anterior, runs
+    sem jogos novos zerariam tudo pra '–'. Aqui o baseline só avança quando a
+    classificação muda, então as setas persistem e refletem o movimento desde a
+    última mexida.
+
+    ranking: list[(nome, pts)] já ordenado. estado_ant: dict do estado.json (ou {}).
+    Retorna (variacao, ordem_atual, ordem_baseline):
+      variacao[nome] = +n subiu | -n caiu | 0 igual | None sem histórico.
+    """
+    ordem_atual = [nome for nome, _ in ranking]
+    ordem_prev = estado_ant.get("ordem", [])               # "atual" do run anterior
+    ordem_baseline = estado_ant.get("ordem_anterior", [])  # baseline congelado
+    if ordem_atual != ordem_prev:
+        # a classificação mudou → baseline passa a ser a última ordem estável
+        ordem_baseline = ordem_prev
+    pos_base = {nome: i for i, nome in enumerate(ordem_baseline)}
+    variacao = {nome: (pos_base[nome] - i if nome in pos_base else None)
+                for i, (nome, _) in enumerate(ranking)}
+    return variacao, ordem_atual, ordem_baseline
+
+
 def main(buscar=buscar_partidas_finalizadas):
     agora = datetime.now(TZ_BR)
     wb = openpyxl.load_workbook(ARQUIVO)
@@ -144,11 +168,8 @@ def main(buscar=buscar_partidas_finalizadas):
     palpites = {disp: ler_palpites(wb, aba) for disp, aba in PARTICIPANTES}
     ranking = montar_ranking(palpites, resultados, BONUS, ignorar=JOGOS_IGNORADOS)
 
-    # 3) variação vs estado anterior
-    ordem_ant = _carregar_estado().get("ordem", [])
-    pos_ant = {nome: i for i, nome in enumerate(ordem_ant)}
-    variacao = {nome: (pos_ant[nome] - i if nome in pos_ant else None)
-                for i, (nome, _) in enumerate(ranking)}
+    # 3) variação vs a última ordem estável (baseline congelado entre runs no-op)
+    variacao, ordem_atual, ordem_baseline = calcular_variacao(ranking, _carregar_estado())
 
     # 4) dados da rodada mais recente
     data_rodada, resultados_rodada, pontos_rodada = _dados_rodada(jogos, resultados, palpites)
@@ -174,7 +195,8 @@ def main(buscar=buscar_partidas_finalizadas):
     # 7) salvar estado
     with open(ESTADO, "w", encoding="utf-8") as f:
         json.dump({
-            "ordem": [nome for nome, _ in ranking],
+            "ordem": ordem_atual,
+            "ordem_anterior": ordem_baseline,  # baseline p/ as setas persistirem
             "pontos": {nome: pts for nome, pts in ranking},
             "atualizado_em": agora.isoformat(),
         }, f, ensure_ascii=False, indent=2)
