@@ -1,4 +1,5 @@
 import copy
+import os
 
 import openpyxl
 
@@ -9,9 +10,14 @@ from bolao.planilha import (
 from bolao.pontuacao import montar_ranking
 from bolao.modelo import PARTICIPANTES, BONUS, JOGOS_IGNORADOS
 
-ARQUIVO = "TABELA_APOSTAS_-_COPA_2026.xlsx"
+# Snapshot CONGELADO da planilha (estado "até 24/jun"). Estes testes validam o
+# motor de pontuação contra dados conhecidos — por isso NÃO podem ler a planilha
+# mestre viva (`TABELA_APOSTAS_-_COPA_2026.xlsx`), que o robô atualiza todo dia e
+# faria o gold test quebrar a cada rodada. Fixture extraído via git (commit eaae127);
+# regenerar de propósito só se as regras/engine mudarem.
+ARQUIVO = os.path.join(os.path.dirname(__file__), "fixtures", "planilha_oficial_ate_24jun.xlsx")
 
-# Totais oficiais atuais (aba "Total Pontos", resultados preenchidos até 24/jun).
+# Totais oficiais do snapshot (aba "Total Pontos", resultados preenchidos até 24/jun).
 ESPERADO = {
     "Mané": 110, "AH": 107, "Romanelli": 106, "Su": 100, "Rodrigo": 99,
     "Beda": 95, "Mauro": 95, "Pedro": 90, "Caio": 89, "Biral": 87,
