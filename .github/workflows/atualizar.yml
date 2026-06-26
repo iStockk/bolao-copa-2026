@@ -1,8 +1,19 @@
 name: Atualizar bolão
 
 on:
+  # IMPORTANTE: o cron do GitHub é "melhor esforço" — atrasa e às vezes PULA horários,
+  # principalmente no minuto :00 (mais congestionado do mundo). Por isso usamos VÁRIOS
+  # horários no minuto :17 (fora de pico): se o GitHub furar um, o próximo recupera em ~2h.
+  # Horários em UTC; Brasília = UTC-3. Cobrem a janela de jogos + refresh matinal.
   schedule:
-    - cron: "0 13 * * *"      # 13:00 UTC = 10:00 em Brasília
+    - cron: "17 12 * * *"      # 09:17 BRT — fresquinho de manhã
+    - cron: "17 16 * * *"      # 13:17 BRT
+    - cron: "17 18 * * *"      # 15:17 BRT
+    - cron: "17 20 * * *"      # 17:17 BRT
+    - cron: "17 22 * * *"      # 19:17 BRT
+    - cron: "17 0 * * *"       # 21:17 BRT
+    - cron: "17 2 * * *"       # 23:17 BRT
+    - cron: "17 4 * * *"       # 01:17 BRT — pega jogo que terminou tarde
   workflow_dispatch:           # permite disparar manualmente pelo site do GitHub
   push:
     branches: [main]           # publica automaticamente a cada envio (commit do robô usa [skip ci])
