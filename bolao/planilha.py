@@ -1,12 +1,13 @@
 """Leitura e escrita da planilha do bolão (openpyxl).
 
-Layout: jogos 1..72 nas linhas 5..76. Colunas:
-  A(1)=nº  B(2)=grupo  C(3)=time1  D(4)=gols1  E(5)="X"  F(6)=gols2
-  G(7)=time2  H(8)=data  I(9)=data  J(10)=hora  K(11)=pontos
+Layout: jogo N na linha N+4 (jogo 1 -> linha 5). Colunas:
+  A(1)=nº  B(2)=grupo/rodada  C(3)=time1  D(4)=gols1  E(5)="X"  F(6)=gols2
+  G(7)=time2  H(8)=data  I(9)=data(=H)  J(10)=hora  K(11)=pontos
 A aba "Resultados" guarda o placar oficial; cada aba de participante guarda o palpite (D/F).
 A aba "Total Pontos" tem a tabela de classificação em D12:E24.
 """
 import datetime as _dt
+import re
 
 from bolao.modelo import (
     PARTICIPANTES, BONUS, PRIMEIRA_LINHA, ULTIMA_LINHA, Jogo,
@@ -16,6 +17,9 @@ ABA_RESULTADOS = "Resultados"
 ABA_TOTAL = "Total Pontos"
 COL = {"num": 1, "grupo": 2, "time1": 3, "gols1": 4, "gols2": 6, "time2": 7,
        "data": 8, "hora": 10}
+COL_SEP = 5   # E = "X" entre os gols
+COL_DATA2 = 9  # I = "=H{linha}"
+COL_PONTOS = 11  # K = fórmula de pontos do jogo
 RANKING_PRIMEIRA_LINHA = 12  # D12:E24
 
 
@@ -107,15 +111,88 @@ def escrever_palpites(wb, aba, palpites):
         ws.cell(r, COL["gols2"]).value = g2
 
 
+def _k_formula(r):
+    """Fórmula da coluna K (pontos do jogo na linha r) — idêntica às da fase de
+    grupos. Compara o palpite (D/F) com o oficial (Resultados!D/F): +2 acerto do
+    resultado V/E/D, +1 gols1, +1 gols2, +1 total. (No mata-mata os pênaltis são
+    tratados no motor Python; ver NOTA em adicionar_jogos.)"""
+    return (
+        f"=IF(AND(ISNUMBER(D{r}),ISNUMBER(F{r}),ISNUMBER(Resultados!D{r}),"
+        f"ISNUMBER(Resultados!F{r})),"
+        f"IF(SIGN(D{r}-F{r})=SIGN(Resultados!D{r}-Resultados!F{r}),2,0)"
+        f"+IF(D{r}=Resultados!D{r},1,0)"
+        f"+IF(F{r}=Resultados!F{r},1,0)"
+        f"+IF(D{r}+F{r}=Resultados!D{r}+Resultados!F{r},1,0),0)"
+    )
+
+
+def _escrever_cabecalho_jogo(ws, r, j):
+    """Escreve nº/rodada/times/data/hora de um jogo na linha r (sem placar)."""
+    ws.cell(r, COL["num"]).value = j["numero"]
+    ws.cell(r, COL["grupo"]).value = j.get("rodada", "")
+    ws.cell(r, COL["time1"]).value = j["time1"]
+    ws.cell(r, COL_SEP).value = "X"
+    ws.cell(r, COL["time2"]).value = j["time2"]
+    ws.cell(r, COL["data"]).value = j["data"]
+    ws.cell(r, COL_DATA2).value = f"=H{r}"
+    ws.cell(r, COL["hora"]).value = j["hora"]
+
+
+def adicionar_jogos(wb, jogos):
+    """Adiciona linhas de jogos (mata-mata) na aba Resultados e em cada aba de
+    participante presente, replicando a fórmula K. NÃO preenche placar nem
+    palpite (D/F): o placar oficial vem do robô (Resultados) e os palpites do
+    merge do form (abas). Sobrescreve a linha — re-rodar é seguro.
+
+    jogos: lista de dicts {numero, rodada, time1, time2, data, hora}, com
+    `data` em 'YYYY-MM-DD'.
+
+    NOTA (pênaltis): a fórmula K do Excel usa o sinal V/E/D, então num jogo
+    decidido nos pênaltis (120min empatado) ela NÃO dá o +2 a quem só acertou
+    quem passou — diverge da regra. A classificação publicada no site vem do
+    motor Python (pontuacao.pontos_jogo com `avanca`), que aplica a regra
+    correta; a soma do Excel é só conferência e fica levemente defasada nesses
+    jogos específicos.
+    """
+    abas_part = [aba for _disp, aba in PARTICIPANTES if aba in wb.sheetnames]
+    for j in jogos:
+        r = _linha(j["numero"])
+        _escrever_cabecalho_jogo(wb[ABA_RESULTADOS], r, j)  # Resultados não tem K
+        for aba in abas_part:
+            ws = wb[aba]
+            _escrever_cabecalho_jogo(ws, r, j)
+            ws.cell(r, COL_PONTOS).value = _k_formula(r)
+
+
+def estender_somas_total_pontos(wb):
+    """Estende toda fórmula =SUM(...K5:K<n>...) da aba Total Pontos até o cap
+    atual (ULTIMA_LINHA), para as somas do Excel contarem também os jogos do
+    mata-mata. Cobre a tabela horizontal (linha 6) e a vertical (D12:E24).
+    Idempotente. Retorna o nº de células alteradas."""
+    ws = wb[ABA_TOTAL]
+    alvo = f"K5:K{ULTIMA_LINHA}"
+    alteradas = 0
+    for row in ws.iter_rows():
+        for cell in row:
+            v = cell.value
+            if isinstance(v, str) and "K5:K" in v:
+                novo = re.sub(r"K5:K\d+", alvo, v)
+                if novo != v:
+                    cell.value = novo
+                    alteradas += 1
+    return alteradas
+
+
 def reordenar_classificacao(wb, ranking):
     """Reescreve a tabela de classificação (D12:E24) na ordem do ranking,
-    preservando as fórmulas =SUM('aba'!K5:K76)[+bonus] (Excel recalcula ao abrir)."""
+    preservando as fórmulas =SUM('aba'!K5:K{cap})[+bonus] (Excel recalcula ao
+    abrir). A faixa vai até ULTIMA_LINHA p/ cobrir também os jogos do mata-mata."""
     ws = wb[ABA_TOTAL]
     aba_por_nome = dict(PARTICIPANTES)
     for i, (nome, _pts) in enumerate(ranking):
         r = RANKING_PRIMEIRA_LINHA + i
         aba = aba_por_nome[nome]
         bonus = BONUS.get(nome, 0)
-        formula = f"=SUM('{aba}'!K5:K76)" + (f"+{bonus}" if bonus else "")
+        formula = f"=SUM('{aba}'!K5:K{ULTIMA_LINHA})" + (f"+{bonus}" if bonus else "")
         ws.cell(r, 4).value = nome
         ws.cell(r, 5).value = formula

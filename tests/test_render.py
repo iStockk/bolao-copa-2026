@@ -32,3 +32,14 @@ def test_resultados_opcionais_podem_faltar():
     html = render_pagina([("Ana", 10), ("Bia", 5)], atualizado_em="x")
     assert "Ana" in html and "Bia" in html
     assert "Resultados" not in html  # seção de resultados omitida
+
+
+def test_kicker_usa_a_fase_informada():
+    html = render_pagina([("Ana", 10)], atualizado_em="x", fase="Mata-mata")
+    assert "Mata-mata" in html
+    assert "Fase de Grupos" not in html
+
+
+def test_kicker_default_e_fase_de_grupos():
+    html = render_pagina([("Ana", 10)], atualizado_em="x")
+    assert "Fase de Grupos" in html

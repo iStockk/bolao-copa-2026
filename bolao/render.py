@@ -140,7 +140,7 @@ def _card_premio(pos, valor, nome):
 
 def render_pagina(ranking, *, variacao=None, resultados_rodada=None,
                   pontos_rodada=None, premio=None, atualizado_em="",
-                  data_rodada=""):
+                  data_rodada="", fase="Fase de Grupos"):
     variacao = variacao or {}
     premio = premio or PREMIO
 
@@ -189,7 +189,7 @@ def render_pagina(ranking, *, variacao=None, resultados_rodada=None,
 <body>
 <div class="wrap">
   <header>
-    <div class="kicker">⚽ Copa 2026 · Fase de Grupos</div>
+    <div class="kicker">⚽ Copa 2026 · {_esc(fase)}</div>
     <h1>Bolão<br>Copa 2026</h1>
     <div class="sub">Classificação geral · {len(ranking)} apostadores</div>
     <div class="atualizado"><span class="dot"></span> Atualizado em {_esc(atualizado_em)}</div>

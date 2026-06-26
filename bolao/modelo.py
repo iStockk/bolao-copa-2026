@@ -29,9 +29,19 @@ BONUS = {"Caio": 10, "Camps": 10, "Kim": 10}
 # O robô NUNCA preenche nem pontua estes jogos, mesmo na auto-recuperação.
 JOGOS_IGNORADOS = frozenset({1, 2, 3, 4})
 
-# Jogos 1..72 ficam nas linhas 5..76 de cada aba.
+# Jogos começam na linha 5 (jogo 1). `ULTIMA_LINHA` é o CAP de leitura/soma: cobre
+# o torneio inteiro — 72 da fase de grupos + 32 do mata-mata (16 oitavas-de-32 +
+# 8 + 4 + 2 + 1 3º lugar + 1 final) = 104 jogos -> linha 5+104-1 = 108. Linhas
+# vazias acima do que já existe somam 0 e são ignoradas na leitura, então deixar
+# o cap largo desde já é seguro e evita reescrever faixas a cada rodada.
 PRIMEIRA_LINHA = 5
-ULTIMA_LINHA = 76
+ULTIMA_LINHA = 108
+ULTIMA_LINHA_GRUPOS = 76  # última linha da fase de grupos (jogo 72) — referência
+
+# Último jogo da fase de grupos. Jogos com número acima disto são do mata-mata
+# (Fase 2). Constante separada do cap de linhas: serve para rotular a fase no
+# site sem depender de quantas linhas a planilha lê.
+ULTIMO_JOGO_GRUPOS = 72
 
 # Rateio do prêmio (R$50 x 13 = R$650).
 PREMIO = {1: 325, 2: 195, 3: 130}

@@ -5,10 +5,11 @@ import openpyxl
 
 from bolao.planilha import (
     ler_jogos, ler_palpites, ler_resultados, escrever_resultado,
-    escrever_palpites, reordenar_classificacao,
+    escrever_palpites, reordenar_classificacao, adicionar_jogos,
+    estender_somas_total_pontos,
 )
 from bolao.pontuacao import montar_ranking
-from bolao.modelo import PARTICIPANTES, BONUS, JOGOS_IGNORADOS
+from bolao.modelo import PARTICIPANTES, BONUS, JOGOS_IGNORADOS, ULTIMA_LINHA
 
 # Snapshot CONGELADO da planilha (estado "até 24/jun"). Estes testes validam o
 # motor de pontuação contra dados conhecidos — por isso NÃO podem ler a planilha
@@ -79,11 +80,11 @@ def test_reordenar_classificacao_escreve_ordem_e_formulas():
     ws = wb["Total Pontos"]
     assert ws.cell(12, 4).value == "Mané"
     assert ws.cell(13, 4).value == "AH"
-    # Kim tem bônus +10 na fórmula
+    # Kim tem bônus +10 na fórmula; a faixa cobre o torneio todo (até o cap)
     assert ws.cell(14, 4).value == "Kim"
-    assert ws.cell(14, 5).value == "=SUM('Kim'!K5:K76)+10"
+    assert ws.cell(14, 5).value == f"=SUM('Kim'!K5:K{ULTIMA_LINHA})+10"
     # Mané não tem bônus
-    assert ws.cell(12, 5).value == "=SUM('Mané'!K5:K76)"
+    assert ws.cell(12, 5).value == f"=SUM('Mané'!K5:K{ULTIMA_LINHA})"
 
 
 def test_escrever_palpites_grava_gols_nas_colunas_D_e_F():
@@ -104,3 +105,50 @@ def test_escrever_palpites_sobrescreve_palpite_anterior():
     escrever_palpites(wb, "Su", {73: (1, 2)})
     ws = wb["Su"]
     assert (ws.cell(77, 4).value, ws.cell(77, 6).value) == (1, 2)
+
+
+# --- Fase 2: estender a planilha com os jogos do mata-mata ---
+
+def test_adicionar_jogos_insere_em_resultados_e_nas_abas():
+    wb = openpyxl.Workbook()
+    wb.active.title = "Resultados"
+    wb.create_sheet("Beda")
+    wb.create_sheet("Su")
+    adicionar_jogos(wb, [
+        {"numero": 73, "rodada": "32-avos", "time1": "Brasil",
+         "time2": "Croácia", "data": "2026-06-28", "hora": "16:00"},
+    ])
+    # o jogo entra na aba Resultados, SEM placar oficial
+    jogos = ler_jogos(wb)
+    assert 73 in jogos
+    assert (jogos[73].time1, jogos[73].time2) == ("Brasil", "Croácia")
+    assert jogos[73].data == "2026-06-28"
+    assert ler_resultados(wb)[73] == (None, None)
+    # cada aba de participante recebe a fórmula K (linha 77) e palpite vazio
+    for aba in ("Beda", "Su"):
+        ws = wb[aba]
+        assert ws.cell(77, 11).value.startswith("=IF(AND(ISNUMBER(D77)")
+        assert (ws.cell(77, 4).value, ws.cell(77, 6).value) == (None, None)
+
+
+def test_adicionar_jogos_usa_so_as_abas_presentes():
+    # não deve falhar se nem todas as 13 abas existem
+    wb = openpyxl.Workbook()
+    wb.active.title = "Resultados"
+    wb.create_sheet("Beda")
+    adicionar_jogos(wb, [{"numero": 73, "rodada": "R32", "time1": "A",
+                          "time2": "B", "data": "2026-06-28", "hora": "16:00"}])
+    assert wb["Beda"].cell(77, 11).value is not None
+
+
+def test_estender_somas_total_pontos_ate_o_cap():
+    wb = openpyxl.Workbook()
+    ws = wb.active
+    ws.title = "Total Pontos"
+    ws.cell(6, 4).value = "=SUM(Beda!K5:K76)"          # tabela horizontal (linha 6)
+    ws.cell(21, 5).value = "=SUM('Caio'!K5:K76)+10"     # com bônus
+    n = estender_somas_total_pontos(wb)
+    assert n == 2
+    assert ws.cell(6, 4).value == f"=SUM(Beda!K5:K{ULTIMA_LINHA})"
+    assert ws.cell(21, 5).value == f"=SUM('Caio'!K5:K{ULTIMA_LINHA})+10"
+    assert estender_somas_total_pontos(wb) == 0  # idempotente
