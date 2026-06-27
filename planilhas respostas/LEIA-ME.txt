@@ -1,0 +1,19 @@
+PASTA DAS RESPOSTAS DO MATA-MATA
+=================================
+
+Coloque AQUI os 13 arquivos Excel que cada participante devolver.
+
+Como nomear cada arquivo:
+- mantenha o nome original e acrescente um ESPACO + o nome da pessoa no fim.
+  Exemplos:
+    APOSTAS_MATA-MATA_COPA_2026 Kim.xlsx
+    APOSTAS_MATA-MATA_COPA_2026 Pedro.xlsx
+    APOSTAS_MATA-MATA_COPA_2026 Camps.xlsx
+
+- o nome no fim e o que identifica de quem e o palpite (acento nao importa:
+  "Mane" ou "Mané" os dois funcionam).
+
+Depois que os 13 estiverem aqui, me chame numa sessao que eu faco o merge
+na planilha mestre automaticamente.
+
+(Os arquivos .xlsx desta pasta nao vao pro Git de proposito — so este LEIA-ME.)

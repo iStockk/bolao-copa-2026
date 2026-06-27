@@ -7,3 +7,9 @@ _BACKUP_*.xlsx
 .DS_Store
 .playwright-mcp/
 bolao-preview.png
+
+# Molde do mata-mata (gerado por scripts/gerar_molde_mata_mata.py — descartável, regenerado a cada rodada)
+APOSTAS_MATA-MATA_*.xlsx
+# Respostas dos participantes (entram aqui pro merge) — não versionar, menos o LEIA-ME
+planilhas respostas/*
+!planilhas respostas/LEIA-ME.txt
