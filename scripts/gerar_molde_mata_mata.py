@@ -44,8 +44,16 @@ def _aba_base(wb):
 
 
 def gerar_molde(mestre_path=MESTRE_PADRAO, saida=SAIDA_PADRAO,
-                n_jogos=16, titulo=TITULO_PADRAO):
-    """Cria o molde em branco e salva em `saida`. Retorna o caminho salvo."""
+                n_jogos=16, titulo=TITULO_PADRAO, confrontos=None):
+    """Cria o molde e salva em `saida`. Retorna o caminho salvo.
+
+    Sem `confrontos`: molde EM BRANCO (times/data/hora vazios).
+    Com `confrontos` (lista de dicts {time1, time2, data, hora, rodada?}, na
+    ordem do chaveamento): preenche os times/data/hora — pronto pra mandar.
+    Os gols (D/F) ficam SEMPRE em branco (é o que cada um preenche)."""
+    if confrontos:
+        n_jogos = len(confrontos)
+
     wb = openpyxl.load_workbook(mestre_path)
     base = _aba_base(wb)
 
@@ -61,21 +69,22 @@ def gerar_molde(mestre_path=MESTRE_PADRAO, saida=SAIDA_PADRAO,
     for coord in ("B2", "B3", "G3"):  # valores de Nome / Celular / e-mail
         ws[coord].value = None
 
-    # 3) reescreve as N linhas de jogos, em branco (só nº, "X" e nada mais)
+    # 3) reescreve as N linhas de jogos (gols sempre em branco)
     primeira = PRIMEIRA_LINHA
     ultima = primeira + n_jogos - 1
     for i in range(n_jogos):
         r = primeira + i
+        c = confrontos[i] if confrontos else {}
         ws.cell(r, COL["num"]).value = i + 1
-        ws.cell(r, COL["grupo"]).value = None
-        ws.cell(r, COL["time1"]).value = None
+        ws.cell(r, COL["grupo"]).value = c.get("rodada")
+        ws.cell(r, COL["time1"]).value = c.get("time1")
         ws.cell(r, COL["gols1"]).value = None
         ws.cell(r, COL_SEP).value = "X"
         ws.cell(r, COL["gols2"]).value = None
-        ws.cell(r, COL["time2"]).value = None
-        ws.cell(r, COL["data"]).value = None
-        ws.cell(r, COL_DATA2).value = None
-        ws.cell(r, COL["hora"]).value = None
+        ws.cell(r, COL["time2"]).value = c.get("time2")
+        ws.cell(r, COL["data"]).value = c.get("data")
+        ws.cell(r, COL_DATA2).value = (f"=H{r}" if confrontos else None)
+        ws.cell(r, COL["hora"]).value = c.get("hora")
         ws.cell(r, COL_PONTOS).value = None  # sem coluna de pontos no molde
 
     # 4) apaga linhas de jogos sobrando abaixo da última
