@@ -28,11 +28,27 @@ from scripts.gerar_molde_mata_mata import gerar_molde, MESTRE_PADRAO, SAIDA_PADR
 PRIMEIRO_JOGO = 73     # a 1ª rodada do mata-mata começa no jogo 73
 RODADA = "R32"         # rótulo que vai na coluna GRUPO
 
-# >>> EDITAR DOMINGO: 16 confrontos na ordem do chaveamento <<<
-# Cada item: dict(time1=..., time2=..., data="YYYY-MM-DD", hora="HH:MM")
+# >>> 16 confrontos do Round of 32 na ordem do chaveamento (FIFA M73..M88) <<<
+# Datas/horas em horário de Brasília (UTC-3). Fonte: Wikipedia (knockout stage)
+# cruzado com CBS/ESPN/Sky; Spain×Áustria e Suíça×Argélia confirmados pela
+# classificação dos 8 melhores 3ºs (grupos B,D,E,F,I,J,K,L; Irã/Grupo G ficou fora).
 CONFRONTOS = [
-    # dict(time1="México", time2="Canadá", data="2026-06-28", hora="16:00"),
-    # ... (16 no total)
+    dict(time1="África do Sul", time2="Canadá",   data="2026-06-28", hora="16:00"),  # 73
+    dict(time1="Alemanha",      time2="Paraguai", data="2026-06-29", hora="17:30"),  # 74
+    dict(time1="Holanda",       time2="Marrocos", data="2026-06-29", hora="22:00"),  # 75
+    dict(time1="Brasil",        time2="Japão",    data="2026-06-29", hora="14:00"),  # 76
+    dict(time1="França",        time2="Suécia",   data="2026-06-30", hora="18:00"),  # 77
+    dict(time1="Costa do Marfim", time2="Noruega", data="2026-06-30", hora="14:00"), # 78
+    dict(time1="México",        time2="Equador",  data="2026-06-30", hora="22:00"),  # 79
+    dict(time1="Inglaterra",    time2="RD Congo", data="2026-07-01", hora="13:00"),  # 80
+    dict(time1="EUA",           time2="Bósnia",   data="2026-07-01", hora="21:00"),  # 81
+    dict(time1="Bélgica",       time2="Senegal",  data="2026-07-01", hora="17:00"),  # 82
+    dict(time1="Portugal",      time2="Croácia",  data="2026-07-02", hora="20:00"),  # 83
+    dict(time1="Espanha",       time2="Áustria",  data="2026-07-02", hora="16:00"),  # 84
+    dict(time1="Suíça",         time2="Argélia",  data="2026-07-03", hora="00:00"),  # 85
+    dict(time1="Argentina",     time2="Cabo Verde", data="2026-07-03", hora="19:00"),# 86
+    dict(time1="Colômbia",      time2="Gana",     data="2026-07-03", hora="22:30"),  # 87
+    dict(time1="Austrália",     time2="Egito",    data="2026-07-03", hora="15:00"),  # 88
 ]
 
 
