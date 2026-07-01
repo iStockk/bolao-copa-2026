@@ -23,16 +23,22 @@ def pontos_jogo(pc, pf, rc, rf, avanca=None):
     avanca: usado no mata-mata quando o jogo foi decidido nos PÊNALTIS (placar
     empatado nos 120min). Indica quem se classificou — 1=time1 (casa), 2=time2
     (visitante). Nesse caso o +2 do resultado vai para quem APONTOU o time que
-    passou; apostar empate NÃO leva o +2 (mas ainda leva os +1 dos gols/total).
-    Em jogo normal (avanca=None), o +2 é pelo acerto do sinal V/E/D, como sempre.
+    passou OU para quem CRAVOU o empate dos 120min (regra 01/07/2026: empate
+    cravado também pode valer os 5). Em jogo normal (avanca=None), o +2 é pelo
+    acerto do sinal V/E/D, como sempre.
     """
     if not all(_num(v) for v in (pc, pf, rc, rf)):
         return 0
     if avanca is None:
         p = 2 if _sign(pc - pf) == _sign(rc - rf) else 0
     else:
+        # Jogo de pênaltis: leva o +2 quem apontou o time que PASSOU ou quem
+        # CRAVOU o empate dos 120min. Como avanca só é setado em jogo empatado
+        # nos 120min, "acertar o sinal V/E/D" aqui equivale a ter apostado empate.
         palpite_vencedor = 1 if pc > pf else (2 if pf > pc else 0)  # 0 = apostou empate
-        p = 2 if palpite_vencedor == avanca else 0
+        acertou_avanco = palpite_vencedor == avanca
+        acertou_resultado = _sign(pc - pf) == _sign(rc - rf)
+        p = 2 if (acertou_avanco or acertou_resultado) else 0
     p += 1 if pc == rc else 0
     p += 1 if pf == rf else 0
     p += 1 if pc + pf == rc + rf else 0

@@ -53,8 +53,9 @@ def test_montar_ranking_ordena_desc_com_desempate():
     assert ranking == [("Ana", 5), ("Cau", 5), ("Bia", 1)]
 
 
-# --- Mata-mata: jogo decidido nos pênaltis (placar vale até 120min; o +2 vai
-# --- para quem apontou o TIME QUE PASSOU, não para quem apostou empate).
+# --- Mata-mata: jogo decidido nos pênaltis (placar vale até 120min). O +2 vai
+# --- para quem apontou o TIME QUE PASSOU **ou** para quem CRAVOU o empate dos
+# --- 120min (regra 01/07/2026 — empate cravado também pode valer os 5).
 # --- avanca=1 -> passou o time1 (casa); avanca=2 -> passou o time2 (visitante).
 
 def test_penaltis_quem_apontou_o_time_que_passou_ganha_o_2():
@@ -63,10 +64,16 @@ def test_penaltis_quem_apontou_o_time_que_passou_ganha_o_2():
     assert pontos_jogo(0, 2, 1, 1, avanca=2) == 3
 
 
-def test_penaltis_apostar_empate_nao_ganha_o_2_so_os_gols():
-    # real 1x1, passou o visitante. Palpite empate 1x1: NÃO leva o +2 do resultado,
-    # mas ainda leva os gols: +1 casa, +1 visitante, +1 total = 3.
-    assert pontos_jogo(1, 1, 1, 1, avanca=2) == 3
+def test_penaltis_empate_cravado_vale_5():
+    # regra 01/07/2026: real 1x1 (foi pros pênaltis), palpite empate 1x1 CRAVADO:
+    # +2 (cravou o empate dos 120min) +1 casa +1 visitante +1 total = 5.
+    assert pontos_jogo(1, 1, 1, 1, avanca=2) == 5
+
+
+def test_penaltis_empate_no_sinal_mas_gols_errados_leva_so_o_2():
+    # real 1x1 nos pênaltis, palpite 2x2 (empate, mas gols errados):
+    # +2 (acertou o empate) + 0 gols (2!=1) + 0 total (4!=2) = 2.
+    assert pontos_jogo(2, 2, 1, 1, avanca=2) == 2
 
 
 def test_penaltis_quem_apontou_o_time_errado_nao_ganha_o_2():
