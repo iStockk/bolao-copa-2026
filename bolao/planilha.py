@@ -12,6 +12,7 @@ import re
 from bolao.modelo import (
     PARTICIPANTES, BONUS, PRIMEIRA_LINHA, ULTIMA_LINHA, Jogo,
 )
+from bolao.pontuacao import pontos_jogo
 
 ABA_RESULTADOS = "Resultados"
 ABA_TOTAL = "Total Pontos"
@@ -147,12 +148,12 @@ def adicionar_jogos(wb, jogos):
     jogos: lista de dicts {numero, rodada, time1, time2, data, hora}, com
     `data` em 'YYYY-MM-DD'.
 
-    NOTA (pênaltis): a fórmula K do Excel usa o sinal V/E/D, então num jogo
-    decidido nos pênaltis (120min empatado) ela NÃO dá o +2 a quem só acertou
-    quem passou — diverge da regra. A classificação publicada no site vem do
-    motor Python (pontuacao.pontos_jogo com `avanca`), que aplica a regra
-    correta; a soma do Excel é só conferência e fica levemente defasada nesses
-    jogos específicos.
+    NOTA (pênaltis): a fórmula K do Excel usa só o sinal V/E/D e não sabe quem
+    passou nos pênaltis. Por isso, nos jogos decididos nos pênaltis, o robô
+    SOBRESCREVE a K com o VALOR exato do motor Python (ver
+    `fixar_pontos_penaltis`, chamada em gerar.py antes de salvar) — assim o
+    Excel (célula e somas) bate com o site. A classificação publicada vem sempre
+    do motor Python (pontuacao.pontos_jogo com `avanca`).
     """
     abas_part = [aba for _disp, aba in PARTICIPANTES if aba in wb.sheetnames]
     for j in jogos:
@@ -196,3 +197,30 @@ def reordenar_classificacao(wb, ranking):
         formula = f"=SUM('{aba}'!K5:K{ULTIMA_LINHA})" + (f"+{bonus}" if bonus else "")
         ws.cell(r, 4).value = nome
         ws.cell(r, 5).value = formula
+
+
+def fixar_pontos_penaltis(wb, palpites, resultados, avancos):
+    """Sobrescreve a coluna K (com VALOR, não fórmula) dos jogos decididos nos
+    pênaltis, para o Excel bater com o site.
+
+    A fórmula K usa só o sinal V/E/D e não sabe quem passou nos pênaltis; aqui
+    gravamos o ponto exato do motor Python (`pontos_jogo` com `avanca`), de modo
+    que também a soma do Excel fique correta nesses jogos. Idempotente — o robô
+    reescreve a cada run. Só toca jogos com placar e avanço conhecidos.
+
+    palpites: {disp: {num: (g1, g2)}}; resultados: {num: (rc, rf)};
+    avancos: {num: 1|2}. Retorna o nº de células gravadas.
+    """
+    gravadas = 0
+    for num, avanca in (avancos or {}).items():
+        rc, rf = resultados.get(num, (None, None))
+        if rc is None or rf is None:
+            continue
+        r = _linha(num)
+        for disp, aba in PARTICIPANTES:
+            if aba not in wb.sheetnames:
+                continue
+            pc, pf = palpites.get(disp, {}).get(num, (None, None))
+            wb[aba].cell(r, COL_PONTOS).value = pontos_jogo(pc, pf, rc, rf, avanca=avanca)
+            gravadas += 1
+    return gravadas

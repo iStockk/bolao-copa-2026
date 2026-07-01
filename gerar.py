@@ -18,7 +18,7 @@ from bolao.modelo import (
 )
 from bolao.planilha import (
     ler_jogos, ler_palpites, ler_resultados, escrever_resultado,
-    reordenar_classificacao,
+    reordenar_classificacao, fixar_pontos_penaltis,
 )
 from bolao.pontuacao import montar_ranking, pontos_jogo
 from bolao.fetcher import buscar_partidas_finalizadas
@@ -243,7 +243,10 @@ def main(buscar=buscar_partidas_finalizadas):
     data_rodada, resultados_rodada, pontos_rodada = _dados_rodada(
         jogos, resultados, palpites, avancos)
 
-    # 5) reordenar a classificação na planilha e salvar
+    # 5) reordenar a classificação na planilha e salvar. Antes, fixa a K dos
+    #    jogos de pênaltis com o valor do motor (a fórmula K não sabe quem passou),
+    #    pra o Excel — célula e somas — bater com o site.
+    fixar_pontos_penaltis(wb, palpites, resultados, avancos)
     reordenar_classificacao(wb, ranking)
     wb.save(ARQUIVO)
 

@@ -6,7 +6,7 @@ import openpyxl
 from bolao.planilha import (
     ler_jogos, ler_palpites, ler_resultados, escrever_resultado,
     escrever_palpites, reordenar_classificacao, adicionar_jogos,
-    estender_somas_total_pontos,
+    estender_somas_total_pontos, fixar_pontos_penaltis, _linha, COL_PONTOS,
 )
 from bolao.pontuacao import montar_ranking
 from bolao.modelo import PARTICIPANTES, BONUS, JOGOS_IGNORADOS, ULTIMA_LINHA
@@ -152,3 +152,36 @@ def test_estender_somas_total_pontos_ate_o_cap():
     assert ws.cell(6, 4).value == f"=SUM(Beda!K5:K{ULTIMA_LINHA})"
     assert ws.cell(21, 5).value == f"=SUM('Caio'!K5:K{ULTIMA_LINHA})+10"
     assert estender_somas_total_pontos(wb) == 0  # idempotente
+
+
+# --- Fase 2: nos jogos de pênaltis, o Excel (coluna K) bate com o site ---
+
+def test_fixar_pontos_penaltis_empate_acertado_grava_2():
+    # apostou 2x2 num jogo que deu 1x1 (pênaltis): acerta o empate = +2; gols/total
+    # errados. A fórmula K "cega" daria 2 (sinal 0==0) — aqui gravamos o mesmo valor.
+    disp, aba = PARTICIPANTES[0]
+    wb = openpyxl.Workbook()
+    wb.active.title = aba
+    n = fixar_pontos_penaltis(wb, {disp: {75: (2, 2)}}, {75: (1, 1)}, {75: 2})
+    assert n == 1
+    assert wb[aba].cell(_linha(75), COL_PONTOS).value == 2
+
+
+def test_fixar_pontos_penaltis_apontou_quem_passou_grava_3():
+    # apostou a vitória do visitante, que passou nos pênaltis (Hol 1x2 Mar):
+    # +2 (apontou quem passou) +1 (gols do time1 1==1) = 3. É aqui que o Excel
+    # divergia do site (a fórmula K daria só 1).
+    disp, aba = PARTICIPANTES[0]
+    wb = openpyxl.Workbook()
+    wb.active.title = aba
+    fixar_pontos_penaltis(wb, {disp: {75: (1, 2)}}, {75: (1, 1)}, {75: 2})
+    assert wb[aba].cell(_linha(75), COL_PONTOS).value == 3
+
+
+def test_fixar_pontos_penaltis_ignora_jogo_sem_placar():
+    disp, aba = PARTICIPANTES[0]
+    wb = openpyxl.Workbook()
+    wb.active.title = aba
+    n = fixar_pontos_penaltis(wb, {disp: {80: (1, 1)}}, {80: (None, None)}, {80: 1})
+    assert n == 0
+    assert wb[aba].cell(_linha(80), COL_PONTOS).value is None
