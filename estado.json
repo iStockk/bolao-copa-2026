@@ -2,6 +2,21 @@
   "ordem": [
     "Beda",
     "AH",
+    "Rodrigo",
+    "Romanelli",
+    "Mané",
+    "Su",
+    "Pedro",
+    "Paulo",
+    "Caio",
+    "Biral",
+    "Mauro",
+    "Kim",
+    "Camps"
+  ],
+  "ordem_anterior": [
+    "Beda",
+    "AH",
     "Romanelli",
     "Rodrigo",
     "Mané",
@@ -14,33 +29,18 @@
     "Kim",
     "Camps"
   ],
-  "ordem_anterior": [
-    "Beda",
-    "AH",
-    "Romanelli",
-    "Rodrigo",
-    "Mané",
-    "Caio",
-    "Pedro",
-    "Su",
-    "Mauro",
-    "Paulo",
-    "Biral",
-    "Camps",
-    "Kim"
-  ],
   "pontos": {
-    "Beda": 176,
-    "AH": 172,
-    "Romanelli": 171,
-    "Rodrigo": 169,
-    "Mané": 161,
+    "Beda": 181,
+    "AH": 175,
+    "Rodrigo": 172,
+    "Romanelli": 172,
+    "Mané": 162,
+    "Su": 160,
+    "Pedro": 159,
+    "Paulo": 158,
     "Caio": 157,
-    "Su": 157,
-    "Pedro": 156,
-    "Paulo": 153,
-    "Mauro": 151,
-    "Biral": 149,
+    "Biral": 154,
+    "Mauro": 153,
     "Kim": 98,
     "Camps": 97
   },
@@ -48,5 +48,5 @@
     "74": 2,
     "75": 2
   },
-  "atualizado_em": "2026-07-03T01:09:23.490898-03:00"
+  "atualizado_em": "2026-07-03T03:05:24.977793-03:00"
 }
