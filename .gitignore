@@ -13,3 +13,5 @@ APOSTAS_MATA-MATA_*.xlsx
 # Respostas dos participantes (entram aqui pro merge) — não versionar, menos o LEIA-ME
 planilhas respostas/*
 !planilhas respostas/LEIA-ME.txt
+planilha respostas oitavas/*
+!planilha respostas oitavas/LEIA-ME.txt
