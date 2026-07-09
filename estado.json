@@ -5,8 +5,8 @@
     "Rodrigo",
     "Romanelli",
     "Su",
-    "Pedro",
     "Caio",
+    "Pedro",
     "Mané",
     "Paulo",
     "Mauro",
@@ -23,24 +23,24 @@
     "Pedro",
     "Caio",
     "Mané",
-    "Mauro",
     "Paulo",
+    "Mauro",
     "Biral",
     "Kim",
     "Camps"
   ],
   "pontos": {
-    "Beda": 206,
-    "AH": 198,
-    "Rodrigo": 194,
-    "Romanelli": 189,
-    "Su": 184,
-    "Pedro": 182,
-    "Caio": 181,
-    "Mané": 181,
-    "Paulo": 178,
-    "Mauro": 176,
-    "Biral": 171,
+    "Beda": 211,
+    "AH": 201,
+    "Rodrigo": 199,
+    "Romanelli": 191,
+    "Su": 187,
+    "Caio": 186,
+    "Pedro": 185,
+    "Mané": 184,
+    "Paulo": 183,
+    "Mauro": 179,
+    "Biral": 174,
     "Kim": 114,
     "Camps": 97
   },
@@ -50,5 +50,5 @@
     "88": 2,
     "96": 1
   },
-  "atualizado_em": "2026-07-09T18:42:49.709226-03:00"
+  "atualizado_em": "2026-07-09T20:35:36.641558-03:00"
 }
