@@ -1,20 +1,19 @@
-"""Auto-preenche os confrontos das QUARTAS a partir dos resultados na mestre.
+"""Auto-preenche os confrontos das SEMIFINAIS a partir dos resultados na mestre.
 
-Em vez de digitar os vencedores das oitavas na mão em `preparar_rodada.py`, este
+Em vez de digitar os vencedores das quartas na mão em `preparar_rodada.py`, este
 script LÊ a aba Resultados (que o robô preenche sozinho conforme os jogos saem) +
-os avanços de pênaltis do estado.json, deriva quem passou em J89..J96 e monta os
-4 confrontos das quartas (bracket oficial FIFA 2026):
+os avanços de pênaltis do estado.json, deriva quem passou em J97..J100 e monta os
+2 confrontos das semifinais (bracket oficial FIFA 2026):
 
-    M97 = venc.J89 x venc.J90   |   M98 = venc.J93 x venc.J94
-    M99 = venc.J91 x venc.J92   |   M100 = venc.J95 x venc.J96
+    M101 = venc.J97 x venc.J98   |   M102 = venc.J99 x venc.J100
 
 Uso (na raiz do repo):  python -m scripts.preencher_vencedores
-- Se algum feeder (J89..J96) ainda não tem resultado, mostra o que já dá e diz
+- Se algum feeder (J97..J100) ainda não tem resultado, mostra o que já dá e diz
   quais faltam — NÃO gera o molde (jogo empatado sem avanço registrado conta como
   pendente; rode `python gerar.py` antes, pra o robô gravar o classificado).
-- Quando os 8 vencedores estiverem definidos, chama preparar_rodada.preparar():
+- Quando os 4 vencedores estiverem definidos, chama preparar_rodada.preparar():
   gera APOSTAS_MATA-MATA_COPA_2026.xlsx (pronto pra mandar) e estende a mestre
-  (jogos 97..100). Idempotente — pode rodar quantas vezes quiser.
+  (jogos 101..102). Idempotente — pode rodar quantas vezes quiser.
   Depois: conferir a mestre e fazer commit/push.
 """
 import json
@@ -34,12 +33,11 @@ from scripts import preparar_rodada as pr
 
 ESTADO = "estado.json"
 
-# Bracket das quartas: (jogo_qf, feeder1, feeder2, data, hora) em horário BRT.
-QF_BRACKET = [
-    (97,  89, 90, "2026-07-09", "17:00"),  # 1º jogo = PRAZO
-    (98,  93, 94, "2026-07-10", "13:00"),
-    (99,  91, 92, "2026-07-11", "18:00"),
-    (100, 95, 96, "2026-07-11", "21:00"),
+# Bracket das semifinais: (jogo_sf, feeder1, feeder2, data, hora) em horário BRT.
+# Semis FIFA 2026: SF1 14/jul (Dallas), SF2 15/jul (Atlanta); ambas 15h ET = 16h BRT.
+SF_BRACKET = [
+    (101, 97, 98,  "2026-07-14", "16:00"),  # 1º jogo = PRAZO
+    (102, 99, 100, "2026-07-15", "16:00"),
 ]
 
 
@@ -80,16 +78,16 @@ def vencedor(num, jogos, resultados, avancos):
 def montar_confrontos(mestre=MESTRE_PADRAO):
     """Retorna (confrontos, pendentes).
 
-    confrontos: lista de dicts {time1,time2,data,hora} na ordem M97..M100 (com
+    confrontos: lista de dicts {time1,time2,data,hora} na ordem M101..M102 (com
       None onde o vencedor ainda não saiu).
-    pendentes: lista de nº de feeder (J89..J96) ainda sem vencedor definido."""
+    pendentes: lista de nº de feeder (J97..J100) ainda sem vencedor definido."""
     wb = openpyxl.load_workbook(mestre, data_only=False)
     jogos = ler_jogos(wb)
     resultados = ler_resultados(wb)
     avancos = _carregar_avancos()
 
     confrontos, pendentes = [], []
-    for _qf, f1, f2, data, hora in QF_BRACKET:
+    for _sf, f1, f2, data, hora in SF_BRACKET:
         v1, v2 = vencedor(f1, jogos, resultados, avancos), vencedor(f2, jogos, resultados, avancos)
         if v1 is None:
             pendentes.append(f1)
@@ -102,11 +100,11 @@ def montar_confrontos(mestre=MESTRE_PADRAO):
 def main(mestre=MESTRE_PADRAO):
     confrontos, pendentes = montar_confrontos(mestre)
 
-    print("Confrontos das QUARTAS derivados da mestre:")
-    for (qf, f1, f2, _d, _h), c in zip(QF_BRACKET, confrontos):
+    print("Confrontos das SEMIFINAIS derivados da mestre:")
+    for (sf, f1, f2, _d, _h), c in zip(SF_BRACKET, confrontos):
         t1 = c["time1"] or f"?venc.J{f1}?"
         t2 = c["time2"] or f"?venc.J{f2}?"
-        print(f"  J{qf}: {t1} x {t2}  ({c['data']} {c['hora']})")
+        print(f"  J{sf}: {t1} x {t2}  ({c['data']} {c['hora']})")
 
     if pendentes:
         faltam = ", ".join(f"J{n}" for n in sorted(set(pendentes)))
@@ -115,7 +113,7 @@ def main(mestre=MESTRE_PADRAO):
               "gerar.py` antes pra o robô gravar quem passou nos pênaltis.)")
         return
 
-    print("\n✅ Os 8 vencedores estão definidos — gerando molde + estendendo a mestre:\n")
+    print("\n✅ Os 4 vencedores estão definidos — gerando molde + estendendo a mestre:\n")
     pr.preparar(confrontos=confrontos, mestre=mestre)
 
 

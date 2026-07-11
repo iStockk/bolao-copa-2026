@@ -1,0 +1,12 @@
+Pasta das RESPOSTAS das SEMIFINAIS (jogos 101-102).
+
+Como usar:
+1. Cada participante devolve o molde preenchido (APOSTAS_MATA-MATA_COPA_2026.xlsx).
+2. Renomeie cada arquivo com o NOME no fim, ex.: "APOSTAS_MATA-MATA_COPA_2026 Kim.xlsx".
+3. Jogue os .xlsx renomeados AQUI nesta pasta.
+4. Na raiz do repo, rode:  python -m scripts.merge_respostas
+   (lê esta pasta, grava os palpites na mestre e diz quem falta).
+
+Prazo: 1º jogo (M101), terça 14/07 às 16h (horário de Brasília).
+São 12 participantes (Camps está fora do mata-mata).
+O conteúdo desta pasta NÃO é versionado (só este LEIA-ME).
