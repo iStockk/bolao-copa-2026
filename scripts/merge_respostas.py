@@ -1,9 +1,9 @@
 """Parte 2 da rodada (depois do apito do 1º jogo): merge dos .xlsx na mestre.
 
-Semis: o 1º jogo (M101, venc.J97 × venc.J98) é terça 14/07 às 16h (BRT) = PRAZO.
-Cada participante devolve o arquivo; o Caio renomeia com o nome no fim
-(ex.: "APOSTAS_MATA-MATA_COPA_2026 Kim.xlsx") e joga na pasta
-"planilha respostas semis/". Então, na raiz do repo:
+Última rodada (3º lugar + Final): o 1º jogo (M103, 3º lugar) é sábado 18/07 às
+18h (BRT) = PRAZO. Cada participante devolve o arquivo; o Caio renomeia com o
+nome no fim (ex.: "APOSTAS_MATA-MATA_COPA_2026 Kim.xlsx") e joga na pasta
+"planilha respostas final/". Então, na raiz do repo:
 
     python -m scripts.merge_respostas
 
@@ -27,8 +27,8 @@ from bolao.modelo import PARTICIPANTES
 from bolao.respostas_planilha import merge_arquivos
 from scripts.gerar_molde_mata_mata import MESTRE_PADRAO
 
-PASTA_RESPOSTAS = "planilha respostas semis"   # respostas das SEMIS (quartas usaram "planilha respostas quartas")
-PRIMEIRO_JOGO = 101    # semifinais = jogos 101..102
+PASTA_RESPOSTAS = "planilha respostas final"   # respostas da última rodada (semis usaram "planilha respostas semis")
+PRIMEIRO_JOGO = 103    # última rodada (3º lugar + Final) = jogos 103..104
 
 
 def main(pasta=PASTA_RESPOSTAS, mestre=MESTRE_PADRAO, primeiro_jogo=PRIMEIRO_JOGO):

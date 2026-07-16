@@ -1,19 +1,22 @@
-"""Auto-preenche os confrontos das SEMIFINAIS a partir dos resultados na mestre.
+"""Auto-preenche os confrontos da ÚLTIMA RODADA (3º LUGAR + FINAL) a partir dos
+resultados das semifinais na mestre.
 
-Em vez de digitar os vencedores das quartas na mão em `preparar_rodada.py`, este
-script LÊ a aba Resultados (que o robô preenche sozinho conforme os jogos saem) +
-os avanços de pênaltis do estado.json, deriva quem passou em J97..J100 e monta os
-2 confrontos das semifinais (bracket oficial FIFA 2026):
+Esta rodada tem uma pegadinha em relação às anteriores: o jogo do 3º lugar é
+entre os PERDEDORES das semis (não os vencedores). Por isso, além do
+`vencedor()` (usado na Final), este script tem um `perdedor()` (espelho: o time
+que NÃO passou), usado no 3º lugar. Bracket oficial FIFA 2026:
 
-    M101 = venc.J97 x venc.J98   |   M102 = venc.J99 x venc.J100
+    J103 (3º lugar) = PERDEDOR de J101 x PERDEDOR de J102
+    J104 (Final)    = VENCEDOR de J101 x VENCEDOR de J102
 
 Uso (na raiz do repo):  python -m scripts.preencher_vencedores
-- Se algum feeder (J97..J100) ainda não tem resultado, mostra o que já dá e diz
-  quais faltam — NÃO gera o molde (jogo empatado sem avanço registrado conta como
-  pendente; rode `python gerar.py` antes, pra o robô gravar o classificado).
-- Quando os 4 vencedores estiverem definidos, chama preparar_rodada.preparar():
+- Se alguma semi (J101/J102) ainda não tem resultado, mostra o que já dá e diz
+  o que falta — NÃO gera o molde (semi empatada sem avanço registrado conta como
+  pendente; rode `python gerar.py` antes, pra o robô gravar quem passou nos
+  pênaltis).
+- Quando as 2 semis estiverem decididas, chama preparar_rodada.preparar():
   gera APOSTAS_MATA-MATA_COPA_2026.xlsx (pronto pra mandar) e estende a mestre
-  (jogos 101..102). Idempotente — pode rodar quantas vezes quiser.
+  (jogos 103..104). Idempotente — pode rodar quantas vezes quiser.
   Depois: conferir a mestre e fazer commit/push.
 """
 import json
@@ -33,11 +36,14 @@ from scripts import preparar_rodada as pr
 
 ESTADO = "estado.json"
 
-# Bracket das semifinais: (jogo_sf, feeder1, feeder2, data, hora) em horário BRT.
-# Semis FIFA 2026: SF1 14/jul (Dallas), SF2 15/jul (Atlanta); ambas 15h ET = 16h BRT.
-SF_BRACKET = [
-    (101, 97, 98,  "2026-07-14", "16:00"),  # 1º jogo = PRAZO
-    (102, 99, 100, "2026-07-15", "16:00"),
+# Bracket da última rodada: (jogo, rótulo, feeder1, lado1, feeder2, lado2, data, hora).
+# lado: "V" = pega o VENCEDOR do feeder | "P" = pega o PERDEDOR do feeder.
+# Horários em BRT (= ET + 1h). FIFA 2026: 3º lugar sáb 18/jul 17h ET = 18h BRT
+# (Miami); Final dom 19/jul 15h ET = 16h BRT (MetLife). O 1º jogo (J103) é o
+# PRAZO das apostas.
+FINAL_BRACKET = [
+    (103, "3º Lugar", 101, "P", 102, "P", "2026-07-18", "18:00"),  # perdedores; 1º jogo = PRAZO
+    (104, "Final",    101, "V", 102, "V", "2026-07-19", "16:00"),  # vencedores
 ]
 
 
@@ -75,45 +81,72 @@ def vencedor(num, jogos, resultados, avancos):
     return j.time1 if av == 1 else (j.time2 if av == 2 else None)
 
 
+def perdedor(num, jogos, resultados, avancos):
+    """Espelho de vencedor(): o time que NÃO passou no jogo `num`, ou None.
+
+    Placar decisivo -> quem fez MENOS gols. Empate nos 120min -> o que NÃO está
+    em `avancos` (1=passou casa -> perdedor é o visitante; 2 -> perdedor é a
+    casa); empate sem avanço registrado -> None."""
+    j = jogos.get(num)
+    if j is None:
+        return None
+    rc, rf = resultados.get(num, (None, None))
+    if rc is None or rf is None:
+        return None
+    if rc > rf:
+        return j.time2
+    if rf > rc:
+        return j.time1
+    av = avancos.get(num)  # empate nos 120min -> perdedor é quem NÃO passou
+    return j.time2 if av == 1 else (j.time1 if av == 2 else None)
+
+
+def _time(num, lado, jogos, resultados, avancos):
+    """Aplica vencedor() ou perdedor() conforme o lado ('V' ou 'P')."""
+    fn = vencedor if lado == "V" else perdedor
+    return fn(num, jogos, resultados, avancos)
+
+
 def montar_confrontos(mestre=MESTRE_PADRAO):
     """Retorna (confrontos, pendentes).
 
-    confrontos: lista de dicts {time1,time2,data,hora} na ordem M101..M102 (com
-      None onde o vencedor ainda não saiu).
-    pendentes: lista de nº de feeder (J97..J100) ainda sem vencedor definido."""
+    confrontos: lista de dicts {rodada,time1,time2,data,hora} na ordem J103..J104
+      (com None onde o time ainda não saiu).
+    pendentes: lista de nº de feeder (J101/J102) ainda sem resultado definido."""
     wb = openpyxl.load_workbook(mestre, data_only=False)
     jogos = ler_jogos(wb)
     resultados = ler_resultados(wb)
     avancos = _carregar_avancos()
 
     confrontos, pendentes = [], []
-    for _sf, f1, f2, data, hora in SF_BRACKET:
-        v1, v2 = vencedor(f1, jogos, resultados, avancos), vencedor(f2, jogos, resultados, avancos)
+    for _jogo, rotulo, f1, l1, f2, l2, data, hora in FINAL_BRACKET:
+        v1 = _time(f1, l1, jogos, resultados, avancos)
+        v2 = _time(f2, l2, jogos, resultados, avancos)
         if v1 is None:
             pendentes.append(f1)
         if v2 is None:
             pendentes.append(f2)
-        confrontos.append(dict(time1=v1, time2=v2, data=data, hora=hora))
+        confrontos.append(dict(rodada=rotulo, time1=v1, time2=v2, data=data, hora=hora))
     return confrontos, pendentes
 
 
 def main(mestre=MESTRE_PADRAO):
     confrontos, pendentes = montar_confrontos(mestre)
 
-    print("Confrontos das SEMIFINAIS derivados da mestre:")
-    for (sf, f1, f2, _d, _h), c in zip(SF_BRACKET, confrontos):
-        t1 = c["time1"] or f"?venc.J{f1}?"
-        t2 = c["time2"] or f"?venc.J{f2}?"
-        print(f"  J{sf}: {t1} x {t2}  ({c['data']} {c['hora']})")
+    print("Confrontos da ÚLTIMA RODADA (3º lugar + Final) derivados da mestre:")
+    for (jogo, rotulo, f1, l1, f2, l2, _d, _h), c in zip(FINAL_BRACKET, confrontos):
+        t1 = c["time1"] or f"?{'venc' if l1 == 'V' else 'perd'}.J{f1}?"
+        t2 = c["time2"] or f"?{'venc' if l2 == 'V' else 'perd'}.J{f2}?"
+        print(f"  J{jogo} ({rotulo}): {t1} x {t2}  ({c['data']} {c['hora']})")
 
     if pendentes:
         faltam = ", ".join(f"J{n}" for n in sorted(set(pendentes)))
-        print(f"\n⏳ Ainda sem vencedor definido: {faltam}. "
-              "Molde NÃO gerado. (Se um deles já jogou e empatou, rode `python "
-              "gerar.py` antes pra o robô gravar quem passou nos pênaltis.)")
+        print(f"\n⏳ Ainda sem resultado definido: {faltam}. "
+              "Molde NÃO gerado. (Se uma semi já jogou e empatou nos 120min, rode "
+              "`python gerar.py` antes pra o robô gravar quem passou nos pênaltis.)")
         return
 
-    print("\n✅ Os 4 vencedores estão definidos — gerando molde + estendendo a mestre:\n")
+    print("\n✅ As 2 semifinais estão decididas — gerando molde + estendendo a mestre:\n")
     pr.preparar(confrontos=confrontos, mestre=mestre)
 
 

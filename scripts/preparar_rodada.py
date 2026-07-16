@@ -1,22 +1,21 @@
 """Parte 1 da rodada: monta o molde com os confrontos E estende a mestre.
 
-Rodada atual = SEMIFINAIS (jogos 101..102). O chaveamento fecha quando o ÚLTIMO
-jogo das quartas (J100 Argentina×Suíça) terminar — sábado 11/07 à noite.
-NORMALMENTE use o `preencher_vencedores` (deriva os vencedores das quartas da
-mestre e chama este módulo sozinho). Esta lista CONFRONTOS é só FALLBACK manual:
-1. Preencha os 2 jogos NA ORDEM do chaveamento (nomes em PT, como na planilha).
-   Um já está definido (J101 tem França de venc.J97); troque os placeholders
-   "?VENC_Jxx?" pelos vencedores reais de J98-100 (J98 = Espanha ou Bélgica;
-   J99/J100 saem 11/07).
+Rodada atual = ÚLTIMA (3º LUGAR + FINAL, jogos 103..104), num molde só de 2 jogos.
+NORMALMENTE use o `preencher_vencedores` (deriva da mestre os perdedores das semis
+para o 3º lugar e os vencedores para a Final, e chama este módulo sozinho). Esta
+lista CONFRONTOS é só FALLBACK manual:
+1. Preencha os 2 jogos NA ORDEM do chaveamento (nomes em PT, como na planilha):
+   J103 = 3º lugar = PERDEDOR de J101 x PERDEDOR de J102;
+   J104 = Final    = VENCEDOR de J101 x VENCEDOR de J102.
 2. Rode (na raiz do repo):  python -m scripts.preparar_rodada
    -> gera APOSTAS_MATA-MATA_COPA_2026.xlsx (pronto pra mandar no grupo);
-   -> adiciona os jogos 101..102 na mestre (Resultados + 13 abas, com a fórmula K)
+   -> adiciona os jogos 103..104 na mestre (Resultados + 13 abas, com a fórmula K)
       e estende as somas da aba "Total Pontos".
 3. Confira o resumo impresso e depois faça commit/push da mestre.
 
 IMPORTANTE: a ORDEM dos confrontos aqui define o casamento jogo-do-molde <->
-jogo-da-mestre (molde 1 = jogo 101, molde 2 = jogo 102). Não mude a ordem depois
-de mandar o molde, senão o merge das respostas sai trocado.
+jogo-da-mestre (molde 1 = jogo 103 = 3º lugar, molde 2 = jogo 104 = Final). Não
+mude a ordem depois de mandar o molde, senão o merge das respostas sai trocado.
 """
 import sys
 
@@ -30,23 +29,21 @@ except Exception:
 from bolao.planilha import adicionar_jogos, estender_somas_total_pontos
 from scripts.gerar_molde_mata_mata import gerar_molde, MESTRE_PADRAO, SAIDA_PADRAO
 
-PRIMEIRO_JOGO = 101    # as SEMIFINAIS começam no jogo 101
-RODADA = "SF"          # rótulo que vai na coluna GRUPO (semifinais)
-TITULO = "COPA 2026 - APOSTAS MATA-MATA (SEMIFINAIS - 2 JOGOS)"
+PRIMEIRO_JOGO = 103    # a última rodada (3º lugar + Final) começa no jogo 103
+RODADA = "Final"       # rótulo default da coluna GRUPO (cada confronto tem o seu abaixo)
+TITULO = "COPA 2026 - APOSTAS MATA-MATA (3º LUGAR + FINAL - 2 JOGOS)"
 
-# >>> 2 confrontos das SEMIFINAIS na ORDEM do chaveamento FIFA (M101..M102) <<<.
-# Datas/horas em horário de Brasília (BRT = ET + 1h; ambas 15h ET = 16h BRT).
+# >>> 2 confrontos da ÚLTIMA RODADA na ORDEM do chaveamento FIFA (M103..M104) <<<.
+# Datas/horas em horário de Brasília (BRT = ET + 1h).
 # Chaveamento oficial FIFA 2026:
-#   M101 = venc.J97 x venc.J98   |   M102 = venc.J99 x venc.J100
-# JÁ DEFINIDO (J97 encerrado):
-#   M101.time1 = França (J97 França 2x0 Marrocos)
-# A DEFINIR (o script se recusa a rodar enquanto sobrar algum "?"):
-#   M101.time2 = ?VENC_J98? (Espanha ou Bélgica)                     [J98]
-#   M102 = ?VENC_J99? (Noruega ou Inglaterra) x ?VENC_J100? (Argentina ou Suíça)  [J99/J100 = 11/07]
+#   M103 (3º lugar) = PERDEDOR de J101 x PERDEDOR de J102
+#   M104 (Final)    = VENCEDOR de J101 x VENCEDOR de J102
+# JÁ DEFINIDO (semis encerradas): J101 França 0x2 Espanha, J102 Inglaterra 1x2 Argentina
+#   -> Espanha e Argentina à FINAL; França e Inglaterra ao 3º lugar.
 # (Fonte principal é o preencher_vencedores; esta lista é só fallback manual.)
 CONFRONTOS = [
-    dict(time1="França",     time2="?VENC_J98?",  data="2026-07-14", hora="16:00"),  # 101 v.J97 x v.J98  (1º jogo = PRAZO)
-    dict(time1="?VENC_J99?", time2="?VENC_J100?", data="2026-07-15", hora="16:00"),  # 102 v.J99 x v.J100
+    dict(rodada="3º Lugar", time1="França",  time2="Inglaterra", data="2026-07-18", hora="18:00"),  # 103 perd.J101 x perd.J102 (1º jogo = PRAZO)
+    dict(rodada="Final",    time1="Espanha", time2="Argentina",  data="2026-07-19", hora="16:00"),  # 104 venc.J101 x venc.J102
 ]
 
 
